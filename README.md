@@ -4,9 +4,9 @@
 
 **[Apache RocketMQ](https://rocketmq.apache.org) is a distributed messaging and streaming platform with low latency, high performance and reliability, trillion-level capacity and flexible scalability.**
 
-<<<<<<< HEAD
 [文档地址](https://rocketmq.apache.org/zh/docs/4.x/introduction/03whatis)  
 阅读 rocketmq源码，并加上自己的注释和理解，再结合网上一些分析资料，摘抄一些流程图 
+本源码基于版本 4.4
 
 ## RocketMQ的部署模型
 ![部署架构](https://rocketmq.apache.org/zh/assets/images/RocketMQ%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84-ee0435f80da5faecf47bca69b1c831cb.png)
@@ -30,7 +30,6 @@ NameServer是一个简单的 Topic 路由注册中心，支持 Topic、Broker �
 
 NameServer通常会有多个实例部署，各实例间相互不进行信息通讯。Broker是向每一台NameServer注册自己的路由信息，所以每一个NameServer实例上面都保存一份完整的路由信息。当某个NameServer因某种原因下线了，客户端仍然可以向其它NameServer获取路由信息。
 
-=======
 [文档地址](https://rocketmq.apache.org/zh/docs/4.x/introduction/03whatis)
 ## RocketMQ的部署模型
 ![部署架构](https://rocketmq.apache.org/zh/assets/images/RocketMQ%E9%83%A8%E7%BD%B2%E6%9E%B6%E6%9E%84-ee0435f80da5faecf47bca69b1c831cb.png)
@@ -54,7 +53,6 @@ NameServer是一个简单的 Topic 路由注册中心，支持 Topic、Broker �
 
 NameServer通常会有多个实例部署，各实例间相互不进行信息通讯。Broker是向每一台NameServer注册自己的路由信息，所以每一个NameServer实例上面都保存一份完整的路由信息。当某个NameServer因某种原因下线了，客户端仍然可以向其它NameServer获取路由信息。
 
->>>>>>> f61de72 (add: first)
 ## 代理服务器 Broker
 Broker主要负责消息的存储、投递和查询以及服务高可用保证。
 
