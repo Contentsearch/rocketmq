@@ -52,6 +52,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+/**
+ * 接收 发送的消息 处理分发
+ */
 public abstract class AbstractSendMessageProcessor implements NettyRequestProcessor {
     protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
 
@@ -274,6 +277,9 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         }
     }
 
+    /**
+     * 解析请求 根据 code {@link RequestCode#SEND_MESSAGE} 处理header
+     */
     protected SendMessageRequestHeader parseRequestHeader(RemotingCommand request)
         throws RemotingCommandException {
 

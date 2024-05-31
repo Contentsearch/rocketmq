@@ -77,10 +77,11 @@ public class BrokerControllerTest {
                 nettyServerConfig, //
                 new NettyClientConfig(), //
                 messageStoreConfig);
+        // 初始化broker
         brokerController.initialize();
+        // 启动broker
         brokerController.start();
-        // 睡觉，就不起来
-        System.out.println("你猜");
+        System.out.println("====start==============");
         Thread.sleep(DateUtils.MILLIS_PER_DAY);
     }
 }

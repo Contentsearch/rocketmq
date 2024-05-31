@@ -222,18 +222,28 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+    /**
+     * broker 初始化
+     * @return
+     * @throws CloneNotSupportedException
+     */
     public boolean initialize() throws CloneNotSupportedException {
+        // 加载topic配置 topicConfigManager
         boolean result = this.topicConfigManager.load();
-
+        // 加载consumerOffset配置 topicConfigManager
         result = result && this.consumerOffsetManager.load();
+        // 加载subscriptionGroup 订阅组配置 subscriptionGroupManager
         result = result && this.subscriptionGroupManager.load();
+        // 加载consumerFilter 消费过滤配置 consumerFilterManager
         result = result && this.consumerFilterManager.load();
 
         if (result) {
             try {
+                // 创建消息存储 DefaultMessageStore
                 this.messageStore =
                     new DefaultMessageStore(this.messageStoreConfig, this.brokerStatsManager, this.messageArrivingListener,
                         this.brokerConfig);
+                // 创建BrokerStats
                 this.brokerStats = new BrokerStats((DefaultMessageStore) this.messageStore);
                 //load plugin
                 MessageStorePluginContext context = new MessageStorePluginContext(messageStoreConfig, brokerStatsManager, messageArrivingListener, brokerConfig);
@@ -248,10 +258,14 @@ public class BrokerController {
         result = result && this.messageStore.load();
 
         if (result) {
+            // 创建NettyRemotingServer
             this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.clientHousekeepingService);
             NettyServerConfig fastConfig = (NettyServerConfig) this.nettyServerConfig.clone();
             fastConfig.setListenPort(nettyServerConfig.getListenPort() - 2);
+            // 用 nettyServerConfig.getListenPort()-2的端口 又起了一个fastRemotingServer
+            // 还不知道干什么用的
             this.fastRemotingServer = new NettyRemotingServer(fastConfig, this.clientHousekeepingService);
+            // 创建了一个 发送消息的线程池 sendMessageExecutor
             this.sendMessageExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getSendMessageThreadPoolNums(),
                 this.brokerConfig.getSendMessageThreadPoolNums(),
@@ -260,6 +274,7 @@ public class BrokerController {
                 this.sendThreadPoolQueue,
                 new ThreadFactoryImpl("SendMessageThread_"));
 
+            // 创建了一个 拉取消息的线程池 pullMessageExecutor
             this.pullMessageExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getPullMessageThreadPoolNums(),
                 this.brokerConfig.getPullMessageThreadPoolNums(),
@@ -268,6 +283,7 @@ public class BrokerController {
                 this.pullThreadPoolQueue,
                 new ThreadFactoryImpl("PullMessageThread_"));
 
+            // 创建 query消息的线程池 queryMessageExecutor
             this.queryMessageExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getQueryMessageThreadPoolNums(),
                 this.brokerConfig.getQueryMessageThreadPoolNums(),
@@ -288,6 +304,7 @@ public class BrokerController {
                 this.clientManagerThreadPoolQueue,
                 new ThreadFactoryImpl("ClientManageThread_"));
 
+            // 创建心跳线程池 heartbeatExecutor
             this.heartbeatExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getHeartbeatThreadPoolNums(),
                 this.brokerConfig.getHeartbeatThreadPoolNums(),
@@ -304,14 +321,17 @@ public class BrokerController {
                 this.endTransactionThreadPoolQueue,
                 new ThreadFactoryImpl("EndTransactionThread_"));
 
+            // 创建消费者管理线程池.consumerManageExecutor
             this.consumerManageExecutor =
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            /*** 将以上的线程池 注册 到对应的nettyserver服务 通过 {@link RequestCode}  */
             this.registerProcessor();
 
             final long initialDelay = UtilAll.computNextMorningTimeMillis() - System.currentTimeMillis();
             final long period = 1000 * 60 * 60 * 24;
+            // 定时任务 从第二天后开始 每天记录brokerStats 每天新增的msg和消费的msg
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -323,6 +343,7 @@ public class BrokerController {
                 }
             }, initialDelay, period, TimeUnit.MILLISECONDS);
 
+            // 每10秒定时刷盘 将 消费位点 刷到磁盘
             this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
                 @Override
                 public void run() {
@@ -396,6 +417,7 @@ public class BrokerController {
                 }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
             }
 
+            // 从主节点同步
             if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
                 if (this.messageStoreConfig.getHaMasterAddress() != null && this.messageStoreConfig.getHaMasterAddress().length() >= 6) {
                     this.messageStore.updateHaMasterAddress(this.messageStoreConfig.getHaMasterAddress());
@@ -535,6 +557,8 @@ public class BrokerController {
     public void registerProcessor() {
         /**
          * SendMessageProcessor
+         * broker处理 发送消息的处理器  code {@link RequestCode.SEND_MESSAGE}
+         * 注册到本地表 放到 {@link org.apache.rocketmq.remoting.netty.NettyRemotingAbstract.processorTable}
          */
         SendMessageProcessor sendProcessor = new SendMessageProcessor(this);
         sendProcessor.registerSendMessageHook(sendMessageHookList);
@@ -550,6 +574,7 @@ public class BrokerController {
         this.fastRemotingServer.registerProcessor(RequestCode.CONSUMER_SEND_MSG_BACK, sendProcessor, this.sendMessageExecutor);
         /**
          * PullMessageProcessor
+         * 拉取消息 的处理器
          */
         this.remotingServer.registerProcessor(RequestCode.PULL_MESSAGE, this.pullMessageProcessor, this.pullMessageExecutor);
         this.pullMessageProcessor.registerConsumeMessageHook(consumeMessageHookList);
@@ -828,6 +853,7 @@ public class BrokerController {
         }
 
         if (this.remotingServer != null) {
+            // 启动netty服务,监听端口10911，接收消息和发送消息
             this.remotingServer.start();
         }
 
@@ -842,7 +868,7 @@ public class BrokerController {
         if (this.brokerOuterAPI != null) {
             this.brokerOuterAPI.start();
         }
-
+        // 拉取消息的服务
         if (this.pullRequestHoldService != null) {
             this.pullRequestHoldService.start();
         }
@@ -855,8 +881,9 @@ public class BrokerController {
             this.filterServerManager.start();
         }
 
+        //  注册broker 到namesrv
         this.registerBrokerAll(true, false, true);
-
+        //  服务启动后 定时注册broker 到namesrv
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -900,6 +927,7 @@ public class BrokerController {
         topicConfigSerializeWrapper.setDataVersion(dataVersion);
         topicConfigSerializeWrapper.setTopicConfigTable(topicConfigTable);
 
+        // 将broker 注册到 namesrv服务
         doRegisterBrokerAll(true, false, topicConfigSerializeWrapper);
     }
 
@@ -927,8 +955,10 @@ public class BrokerController {
         }
     }
 
+    // 将broker 注册到 namesrv服务
     private void doRegisterBrokerAll(boolean checkOrderConfig, boolean oneway,
         TopicConfigSerializeWrapper topicConfigWrapper) {
+        // 注册
         List<RegisterBrokerResult> registerBrokerResultList = this.brokerOuterAPI.registerBrokerAll(
             this.brokerConfig.getBrokerClusterName(),
             this.getBrokerAddr(),

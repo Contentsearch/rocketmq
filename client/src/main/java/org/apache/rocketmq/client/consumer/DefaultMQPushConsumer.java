@@ -45,6 +45,11 @@ import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
+ * 推模式 -
+ * 推荐使用的 push的消费方式
+ * </p>
+ * 底层还是是使用的拉的方式
+ * </p>
  * In most scenarios, this is the mostly recommended class to consume messages.
  * </p>
  *
@@ -78,6 +83,8 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private String consumerGroup;
 
     /**
+     * 集群和广播模式
+     * </p>
      * Message model defines the way how messages are delivered to each consumer clients.
      * </p>
      *
